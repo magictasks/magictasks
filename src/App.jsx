@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import './App.css'
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+import { getBaseApiConfig } from './config'
 
 function App() {
   const [appName, setAppName] = useState('')
@@ -60,11 +59,14 @@ function App() {
     setIsBuilding(true)
     setBuildProgress([])
     
+    const { baseUrl, body: baseBody } = getBaseApiConfig()
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/setup-and-initiate-loop`, {
+      const response = await fetch(`${baseUrl}/setup-and-initiate-loop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...baseBody,
           app_name: appName.trim(),
           description: appDescription,
           images: uploadedImages,
