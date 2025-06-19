@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import './App.css'
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+
 function App() {
   const [appName, setAppName] = useState('')
   const [appDescription, setAppDescription] = useState('')
@@ -8,6 +10,8 @@ function App() {
   const [isBuilding, setIsBuilding] = useState(false)
   const [buildProgress, setBuildProgress] = useState([])
   const [isComplete, setIsComplete] = useState(false)
+  const [appLink, setAppLink] = useState('')
+  const [error, setError] = useState('')
 
   const buildSteps = [
     { step: 'Initializing project...', duration: 2000 },
@@ -22,12 +26,19 @@ function App() {
     { step: 'Finalizing deployment...', duration: 3000 }
   ]
 
+  const isValidAppName = (name) => /^[a-z0-9]([-a-z0-9]{0,127})$/.test(name)
+
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files)
     const imagePromises = files.map(file => {
       return new Promise((resolve) => {
         const reader = new FileReader()
-        reader.onload = (e) => resolve(e.target.result)
+        reader.onload = (e) => {
+          resolve({
+            name: file.name,
+            data: e.target.result
+          })
+        }
         reader.readAsDataURL(file)
       })
     })
@@ -40,16 +51,50 @@ function App() {
   const handleBuildApp = async () => {
     if (!appName || !appDescription) return
     
+    if (!isValidAppName(appName.trim())) {
+      setError('App name must start with a lowercase letter or number, and contain only lowercase letters, numbers, and dashes.')
+      return
+    }
+
+    setError('')
     setIsBuilding(true)
     setBuildProgress([])
     
-    for (let i = 0; i < buildSteps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, buildSteps[i].duration))
-      setBuildProgress(prev => [...prev, buildSteps[i].step])
+    try {
+      const response = await fetch(`${API_BASE_URL}/setup-and-initiate-loop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          app_name: appName.trim(),
+          description: appDescription,
+          images: uploadedImages,
+          model_name: 'default-model',
+          model_api: 'default-api'
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to create app')
+        setIsBuilding(false)
+        return
+      }
+
+      // Simulate build steps
+      for (let i = 0; i < buildSteps.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, buildSteps[i].duration))
+        setBuildProgress(prev => [...prev, buildSteps[i].step])
+      }
+
+      setAppLink(data.link)
+      setIsBuilding(false)
+      setIsComplete(true)
+    } catch (err) {
+      console.error('Build error:', err)
+      setError(`Error creating app: ${err.message}`)
+      setIsBuilding(false)
     }
-    
-    setIsBuilding(false)
-    setIsComplete(true)
   }
 
   const handleReset = () => {
@@ -59,6 +104,8 @@ function App() {
     setIsBuilding(false)
     setBuildProgress([])
     setIsComplete(false)
+    setAppLink('')
+    setError('')
   }
 
   if (isComplete) {
@@ -71,9 +118,9 @@ function App() {
             We've successfully created your app "{appName}"
           </p>
           <div className="success-actions">
-            <button className="primary-button">
+            <a href={appLink} target="_blank" rel="noopener noreferrer" className="primary-button">
               View Your App
-            </button>
+            </a>
             <button className="secondary-button" onClick={handleReset}>
               Build Another App
             </button>
@@ -88,41 +135,38 @@ function App() {
       <header className="header">
         <h1 className="main-title">Magic App Builder</h1>
         <p className="subtitle">
-          Your AI Powered Assistant for Apps, designed to assist in performing tasks
-          when you're thinking big but not sure where to start. Connect directly through its simplicity, 
-          efficiency and improving patient care across various medical fields.
+          Build your dream app in seconds with AI-powered assistance
         </p>
-        {!isBuilding && (
-          <button className="get-started-button" onClick={() => document.getElementById('app-name').focus()}>
-            Get Started
-          </button>
-        )}
       </header>
 
       <div className={`builder-section ${isBuilding ? 'building' : ''}`}>
         {!isBuilding ? (
           <div className="builder-form">
-            <div className="form-group">
-              <label htmlFor="app-name">App Name</label>
-              <input
-                id="app-name"
-                type="text"
-                placeholder="Enter your app name..."
-                value={appName}
-                onChange={(e) => setAppName(e.target.value)}
-                className="app-name-input"
-              />
+            {error && <div className="error-message">{error}</div>}
+            
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="app-name">App Name</label>
+                <input
+                  id="app-name"
+                  type="text"
+                  placeholder="my-awesome-app"
+                  value={appName}
+                  onChange={(e) => setAppName(e.target.value.toLowerCase())}
+                  className="app-name-input"
+                />
+              </div>
             </div>
 
             <div className="form-group">
               <label htmlFor="app-description">What would you like to build?</label>
               <textarea
                 id="app-description"
-                placeholder="Describe your app idea in detail. What features do you need? Who are your users? What problems does it solve?..."
+                placeholder="Describe your app idea in detail..."
                 value={appDescription}
                 onChange={(e) => setAppDescription(e.target.value)}
                 className="app-description-input"
-                rows="6"
+                rows="4"
               />
             </div>
 
@@ -139,13 +183,13 @@ function App() {
                 />
                 <label htmlFor="image-upload" className="upload-label">
                   <span className="upload-icon">📁</span>
-                  <span>Click to upload images or drag and drop</span>
+                  <span>Click to upload or drag and drop</span>
                 </label>
               </div>
               {uploadedImages.length > 0 && (
                 <div className="uploaded-images">
                   {uploadedImages.map((img, idx) => (
-                    <img key={idx} src={img} alt={`Upload ${idx + 1}`} className="uploaded-thumbnail" />
+                    <img key={idx} src={img.data} alt={`Upload ${idx + 1}`} className="uploaded-thumbnail" />
                   ))}
                 </div>
               )}
@@ -182,14 +226,6 @@ function App() {
           </div>
         )}
       </div>
-
-      <footer className="footer">
-        <div className="trust-badges">
-          <span className="badge">Data Security and Compliance</span>
-          <span className="badge">AI-Powered Technology</span>
-          <span className="badge">Instant Deployment</span>
-        </div>
-      </footer>
     </div>
   )
 }
