@@ -1,28 +1,57 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import './App.css'
 import { getBaseApiConfig } from './config'
+import { models, defaultModel } from './models'
 
 function App() {
   const [appName, setAppName] = useState('')
   const [appDescription, setAppDescription] = useState('')
   const [uploadedImages, setUploadedImages] = useState([])
+  const [selectedModel, setSelectedModel] = useState(defaultModel)
   const [isBuilding, setIsBuilding] = useState(false)
   const [buildProgress, setBuildProgress] = useState([])
   const [isComplete, setIsComplete] = useState(false)
   const [appLink, setAppLink] = useState('')
   const [error, setError] = useState('')
 
+  // State for searchable model dropdown
+  const [modelSearchTerm, setModelSearchTerm] = useState('')
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
+  const animationTimeoutId = useRef(null)
+  const progressLengthRef = useRef(0)
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsModelDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    
+    // Cleanup timeout on component unmount
+    const cleanup = () => {
+        if(animationTimeoutId.current) {
+            clearTimeout(animationTimeoutId.current)
+        }
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      cleanup()
+    }
+  }, [dropdownRef])
+
   const buildSteps = [
-    { step: 'Initializing project...', duration: 2000 },
-    { step: 'Setting up React environment...', duration: 3000 },
-    { step: 'Configuring Vite build tools...', duration: 2500 },
-    { step: 'Installing dependencies...', duration: 4000 },
-    { step: 'Setting up authentication...', duration: 3500 },
-    { step: 'Configuring Firebase backend...', duration: 3000 },
-    { step: 'Creating API endpoints...', duration: 2500 },
-    { step: 'Building user interface...', duration: 3500 },
-    { step: 'Optimizing performance...', duration: 2000 },
-    { step: 'Finalizing deployment...', duration: 3000 }
+    { step: 'Initializing project...', duration: 1500 },
+    { step: 'Setting up React environment...', duration: 2000 },
+    { step: 'Configuring Vite build tools...', duration: 1800 },
+    { step: 'Installing dependencies...', duration: 3000 },
+    { step: 'Setting up authentication...', duration: 2500 },
+    { step: 'Configuring Firebase backend...', duration: 2200 },
+    { step: 'Creating API endpoints...', duration: 2000 },
+    { step: 'Building user interface...', duration: 2800 },
+    { step: 'Optimizing performance...', duration: 1500 },
+    { step: 'Finalizing deployment...', duration: 2000 }
   ]
 
   const isValidAppName = (name) => /^[a-z0-9]([-a-z0-9]{0,127})$/.test(name)
@@ -48,67 +77,110 @@ function App() {
   }
 
   const handleBuildApp = async () => {
-    if (!appName || !appDescription) return
-    
-    if (!isValidAppName(appName.trim())) {
-      setError('App name must start with a lowercase letter or number, and contain only lowercase letters, numbers, and dashes.')
-      return
-    }
-
-    setError('')
-    setIsBuilding(true)
-    setBuildProgress([])
-    
-    const { baseUrl, body: baseBody } = getBaseApiConfig()
-    
-    try {
-      const response = await fetch(`${baseUrl}/setup-and-initiate-loop`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...baseBody,
-          app_name: appName.trim(),
-          description: appDescription,
-          images: uploadedImages,
-          model_name: 'default-model',
-          model_api: 'default-api'
-        })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to create app')
-        setIsBuilding(false)
-        return
-      }
-
-      // Simulate build steps
-      for (let i = 0; i < buildSteps.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, buildSteps[i].duration))
-        setBuildProgress(prev => [...prev, buildSteps[i].step])
-      }
-
-      setAppLink(data.link)
-      setIsBuilding(false)
-      setIsComplete(true)
-    } catch (err) {
-      console.error('Build error:', err)
-      setError(`Error creating app: ${err.message}`)
-      setIsBuilding(false)
-    }
+  console.log("Build app initiated.");
+  
+  if (!appName || !appDescription) {
+    console.warn("App name or description missing.");
+    return;
   }
+
+  if (!isValidAppName(appName.trim())) {
+    console.error("Invalid app name:", appName);
+    setError('App name must start with a lowercase letter or number, and contain only lowercase letters, numbers, and dashes.');
+    return;
+  }
+
+  console.log("Inputs validated successfully.");
+  setError('');
+  setIsBuilding(true);
+  setBuildProgress([]);
+  progressLengthRef.current = 0;
+
+  const { baseUrl, body: baseBody } = getBaseApiConfig();
+  console.log("API config determined:", { baseUrl, baseBody });
+
+  const runAnimations = (stepIndex = 0) => {
+    if (stepIndex >= buildSteps.length) {
+      console.log("Animation sequence completed.");
+      return;
+    }
+    const currentStep = buildSteps[stepIndex].step;
+    console.log(`Animation step: ${currentStep}`);
+    setBuildProgress(prev => [...prev, currentStep]);
+    progressLengthRef.current = stepIndex + 1;
+    animationTimeoutId.current = setTimeout(() => {
+      runAnimations(stepIndex + 1);
+    }, buildSteps[stepIndex].duration);
+  };
+
+  console.log("Starting animation sequence.");
+  runAnimations();
+
+  try {
+    console.log("Sending request to backend:", `${baseUrl}/setup-and-initiate-loop`);
+
+    const response = await fetch(`${baseUrl}/setup-and-initiate-loop`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    ...baseBody,
+    app_name: appName.trim(),
+    description: appDescription,
+    images: uploadedImages,
+    model_name: selectedModel,
+    model_api: 'openrouter'
+  })
+});
+
+console.log("Response status:", response.status, response.statusText);
+
+if (!response.ok) {
+  const errorData = await response.json();
+  console.error("Error response:", errorData);
+  setError(errorData.error || 'Failed to create app');
+  setIsBuilding(false);
+  return;
+}
+
+const data = await response.json();
+console.log("Backend response data:", data);
+
+
+    
+    if (animationTimeoutId.current) clearTimeout(animationTimeoutId.current);
+    console.log("Animation timeout cleared.");
+
+    setBuildProgress(buildSteps.map(step => step.step));
+    console.log("Build progress fully updated.");
+
+    setAppLink(data.link);
+    setIsComplete(true);
+    console.log("App build completed successfully. App link set.");
+
+  } catch (err) {
+    console.error('Build error:', err);
+    if (animationTimeoutId.current) clearTimeout(animationTimeoutId.current);
+    setError(`Error creating app: ${err.message}`);
+    setIsBuilding(false);
+  }
+};
+
 
   const handleReset = () => {
     setAppName('')
     setAppDescription('')
     setUploadedImages([])
+    setSelectedModel(defaultModel)
     setIsBuilding(false)
     setBuildProgress([])
     setIsComplete(false)
     setAppLink('')
     setError('')
   }
+  
+  const filteredModels = models.filter(model =>
+    model.name.toLowerCase().includes(modelSearchTerm.toLowerCase())
+  );
 
   if (isComplete) {
     return (
@@ -170,6 +242,46 @@ function App() {
                 className="app-description-input"
                 rows="4"
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="model-select">AI Model</label>
+              <div className="model-select-container" ref={dropdownRef}>
+                <div 
+                  className="model-select-display" 
+                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                >
+                  <span>{models.find(m => m.id === selectedModel)?.name || 'Select a model'}</span>
+                  <span className={`arrow ${isModelDropdownOpen ? 'up' : 'down'}`}>▼</span>
+                </div>
+                {isModelDropdownOpen && (
+                  <div className="model-dropdown">
+                    <input
+                      type="text"
+                      placeholder="Search models..."
+                      value={modelSearchTerm}
+                      onChange={(e) => setModelSearchTerm(e.target.value)}
+                      className="model-search-input"
+                      autoFocus
+                    />
+                    <ul className="model-list">
+                      {filteredModels.map(model => (
+                        <li 
+                          key={model.id} 
+                          onClick={() => {
+                            setSelectedModel(model.id);
+                            setIsModelDropdownOpen(false);
+                            setModelSearchTerm('');
+                          }}
+                          className={selectedModel === model.id ? 'selected' : ''}
+                        >
+                          {model.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="form-group">

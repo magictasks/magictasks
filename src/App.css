@@ -111,6 +111,7 @@ body {
   font-family: 'Roboto', sans-serif;
   transition: all 0.3s ease;
   color: #1a1a1a;
+  background: white;
 }
 
 .app-name-input:focus,
@@ -124,6 +125,86 @@ body {
   resize: vertical;
   min-height: 80px;
 }
+
+/* Model Select Styles */
+.model-select-container {
+  position: relative;
+}
+
+.model-select-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  color: #1a1a1a;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.model-select-display .arrow {
+  transition: transform 0.2s ease-in-out;
+}
+
+.model-select-display .arrow.up {
+  transform: rotate(180deg);
+}
+
+.model-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 10;
+  margin-top: 4px;
+  max-height: 250px;
+  display: flex;
+  flex-direction: column;
+}
+
+.model-search-input {
+  padding: 0.75rem;
+  border: none;
+  border-bottom: 1px solid #eee;
+  font-size: 0.875rem;
+  color: #1a1a1a;
+}
+.model-search-input:focus {
+  outline: none;
+}
+
+.model-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.model-list li {
+  padding: 0.75rem;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.model-list li:hover {
+  background-color: #f0f0f0;
+}
+
+.model-list li.selected {
+  background-color: #e0eafc;
+  font-weight: 500;
+  color: #0a2463;
+}
+/* End Model Select Styles */
+
 
 .upload-area {
   border: 2px dashed #e0e0e0;
