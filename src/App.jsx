@@ -207,9 +207,9 @@ console.log("Backend response data:", data);
   return (
     <div className="app-container">
       <header className="header">
-        <h1 className="main-title">Magic App Builder</h1>
+        <h1 className="main-title">MagicTasks App Builder</h1>
         <p className="subtitle">
-          Build your dream app in seconds with AI-powered assistance
+          Build a full stack app in seconds with AI-powered assistance.  Your app is free to create and download and will be live for 1 day.
         </p>
       </header>
 
