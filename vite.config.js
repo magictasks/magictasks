@@ -9,8 +9,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       host: "0.0.0.0",
-      port: 5173,
-      allowedHosts: [host],
+      port: 6000,
+      allowedHosts: [host, "magictasks.uk"],
       hmr: {
         host: host,
         protocol: host == "localhost" ? "ws" : "wss",
